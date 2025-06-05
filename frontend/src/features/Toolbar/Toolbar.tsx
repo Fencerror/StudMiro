@@ -56,9 +56,8 @@ export default function Toolbar({ onSelectTool, onSelectColor }: ToolbarProps) {
         )}
       </ToolbarList>
 
-      {/* New Color Picker */}
-      <div style={{ marginTop: "1em", textAlign: "center" }}>
-        <label htmlFor="colorPicker" style={{ marginRight: "0.5em" }}>Цвет:</label>
+      <div style={{ marginTop: "1em", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold", backgroundColor: "white", padding: "0.5em", borderRadius: "9999px" }}>
+        <label htmlFor="colorPicker" style={{ marginRight: "0.5em", color: "black" }}>Цвет:</label>
         <input 
           id="colorPicker" 
           type="color" 

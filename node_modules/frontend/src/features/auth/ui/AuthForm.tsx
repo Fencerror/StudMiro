@@ -30,6 +30,7 @@ export default function AuthForm({ type, onSubmit }: AuthFormProps) {
             <label className="sr-only" htmlFor="email">Электронная почта</label>
             <div className="relative">
               <input
+                name="email"
                 placeholder="Введите адрес электронной почты"
                 className="w-full rounded-lg border border-gray-300 p-4 pe-12 text-sm shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
                 id="email"
@@ -48,6 +49,7 @@ export default function AuthForm({ type, onSubmit }: AuthFormProps) {
             <label className="sr-only" htmlFor="password">Пароль</label>
             <div className="relative">
               <input
+                name="password"
                 placeholder="Введите пароль"
                 className="w-full rounded-lg border border-gray-300 p-4 pe-12 text-sm shadow-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
                 id="password"

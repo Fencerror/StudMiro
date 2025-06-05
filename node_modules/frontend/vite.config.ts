@@ -9,4 +9,9 @@ export default defineConfig({
     tailwindcss(),
   
   ],
+  resolve: {
+    alias: {
+      "@features": "/src/features",
+    },
+  },
 })

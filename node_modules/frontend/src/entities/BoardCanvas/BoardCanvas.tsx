@@ -1,42 +1,15 @@
 import { Stage, Layer, Rect, Circle, Text } from "react-konva";
-import { useState, useRef, SetStateAction } from "react";
+import { useState, useRef, SetStateAction, useEffect } from "react";
 
 interface BoardCanvasProps {
   selectedTool: "select" | "rectangle" | "circle" | "text";
-  selectedColor: string;
+  selectedColor: string; // new prop for shape color
 }
-
-interface RectangleShape {
-  id: number;
-  type: "rectangle";
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fill: string;
-}
-interface CircleShape {
-  id: number;
-  type: "circle";
-  x: number;
-  y: number;
-  radius: number;
-  fill: string;
-}
-interface TextShape {
-  id: number;
-  type: "text";
-  x: number;
-  y: number;
-  text: string;
-}
-type Shape = RectangleShape | CircleShape | TextShape;
 
 export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvasProps) {
-  // States for shapes (separate arrays maintained for dragging updates)
-  const [rectangles, setRectangles] = useState<Omit<RectangleShape, "type">[]>([]);
-  const [circles, setCircles] = useState<Omit<CircleShape, "type">[]>([]);
-  const [texts, setTexts] = useState<Omit<TextShape, "type">[]>([]);
+  const [rectangles, setRectangles] = useState<{ id: number; x: number; y: number; width: number; height: number; fill: string }[]>([]);
+  const [circles, setCircles] = useState<{ id: number; x: number; y: number; radius: number; fill: string }[]>([]);
+  const [texts, setTexts] = useState<{ id: number; x: number; y: number; text: string }[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [drawing, setDrawing] = useState(false);
   const [newRect, setNewRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -44,7 +17,6 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [editingText, setEditingText] = useState<{ x: number; y: number; value: string } | null>(null);
   const stageRef = useRef<any>(null);
-  const nextShapeId = useRef(1); // global shape id counter
 
   // Начинаем рисование или выделение
   const handleMouseDown = () => {
@@ -100,12 +72,10 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
     setDrawing(false);
 
     if (selectedTool === "rectangle" && newRect) {
-      const id = nextShapeId.current++;
-      setRectangles([...rectangles, { id, x: newRect.x, y: newRect.y, width: newRect.width, height: newRect.height, fill: selectedColor }]);
+      setRectangles([...rectangles, { id: rectangles.length + 1, fill: selectedColor, ...newRect }]);
       setNewRect(null);
     } else if (selectedTool === "circle" && newCircle) {
-      const id = nextShapeId.current++;
-      setCircles([...circles, { id, x: newCircle.x, y: newCircle.y, radius: newCircle.radius, fill: selectedColor }]);
+      setCircles([...circles, { id: circles.length + 1, fill: selectedColor, ...newCircle }]);
       setNewCircle(null);
     } else if (selectedTool === "select" && selectionRect) {
       const selected: SetStateAction<number[]> = [];
@@ -177,43 +147,40 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
   };
 
   // Удаление выделенных элементов
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Delete") {
-      setRectangles((prevRectangles) => prevRectangles.filter((rect) => !selectedIds.includes(rect.id)));
-      setCircles((prevCircles) => prevCircles.filter((circle) => !selectedIds.includes(circle.id)));
-      setTexts((prevTexts) => prevTexts.filter((text) => !selectedIds.includes(text.id)));
-      setSelectedIds([]);
-    }
-  };
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        setRectangles((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
+        setCircles((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
+        setTexts((prev) => prev.filter((t) => !selectedIds.includes(t.id)));
+        setSelectedIds([]);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIds]);
 
   // Перемещение выделенных элементов
   const handleDragMove = (e: any, id: number, type: "rectangle" | "circle" | "text") => {
+    if (selectedTool !== "select") return;
+
     const pos = e.target.position();
 
     if (type === "rectangle") {
-      setRectangles((prev) => prev.map(rect => rect.id === id ? { ...rect, x: pos.x, y: pos.y } : rect));
+      setRectangles((prevRectangles) =>
+        prevRectangles.map((rect) => (rect.id === id ? { ...rect, x: pos.x, y: pos.y } : rect))
+      );
     } else if (type === "circle") {
-      setCircles((prev) => prev.map(circle => circle.id === id ? { ...circle, x: pos.x, y: pos.y } : circle));
+      setCircles((prevCircles) =>
+        prevCircles.map((circle) => (circle.id === id ? { ...circle, x: pos.x, y: pos.y } : circle))
+      );
     } else if (type === "text") {
-      setTexts((prev) => prev.map(text => text.id === id ? { ...text, x: pos.x, y: pos.y } : text));
+      setTexts((prevTexts) =>
+        prevTexts.map((text) => (text.id === id ? { ...text, x: pos.x, y: pos.y } : text))
+      );
     }
   };
-
-  // Upon text edit blur, add new text shape with a global id.
-  const handleTextBlur = () => {
-    if (editingText && editingText.value.trim()) {
-      const id = nextShapeId.current++;
-      setTexts([...texts, { id, x: editingText.x, y: editingText.y, text: editingText.value }]);
-    }
-    setEditingText(null);
-  };
-
-  // Combine all shapes into one array sorted by creation order
-  const allShapes: Shape[] = [
-    ...rectangles.map(r => ({ ...r, type: "rectangle" as const })),
-    ...circles.map(c => ({ ...c, type: "circle" as const })),
-    ...texts.map(t => ({ ...t, type: "text" as const }))
-  ].sort((a, b) => a.id - b.id);
 
   return (
     <>
@@ -225,60 +192,67 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onDblClick={handleDoubleClick}
-        onKeyDown={handleKeyDown}
         tabIndex={0}
         style={{ background: "#f5f5f5", zIndex: 1 }}
       >
         <Layer>
-          {allShapes.map(shape => {
-             if (shape.type === "rectangle") {
-               return (
-                 <Rect
-                   key={shape.id}
-                   x={shape.x}
-                   y={shape.y}
-                   width={shape.width}
-                   height={shape.height}
-                   fill={shape.fill}
-                   stroke="black"
-                   draggable={true}
-                   onClick={() => handleSelect(shape.id)}
-                   onDragMove={(e) => handleDragMove(e, shape.id, "rectangle")}
-                 />
-               );
-             } else if (shape.type === "circle") {
-               return (
-                 <Circle
-                   key={shape.id}
-                   x={shape.x}
-                   y={shape.y}
-                   radius={shape.radius}
-                   fill={shape.fill}
-                   stroke="black"
-                   draggable={true}
-                   onClick={() => handleSelect(shape.id)}
-                   onDragMove={(e) => handleDragMove(e, shape.id, "circle")}
-                 />
-               );
-             } else if (shape.type === "text") {
-               return (
-                 <Text
-                   key={shape.id}
-                   x={shape.x}
-                   y={shape.y}
-                   text={shape.text}
-                   fontSize={20}
-                   fill="black"
-                   draggable={true}
-                   onClick={() => handleSelect(shape.id)}
-                   onDragMove={(e) => handleDragMove(e, shape.id, "text")}
-                 />
-               );
-             }
-             return null;
-          })}
-          {newRect && <Rect x={newRect.x} y={newRect.y} width={newRect.width} height={newRect.height} fill="rgba(0, 0, 255, 0.3)" />}
-          {newCircle && <Circle x={newCircle.x} y={newCircle.y} radius={newCircle.radius} fill="rgba(0, 0, 255, 0.3)" />}
+          {rectangles.map((rect) => (
+            <Rect
+              key={rect.id}
+              x={rect.x}
+              y={rect.y}
+              width={rect.width}
+              height={rect.height}
+              fill={rect.fill} // use chosen color
+              stroke="black"
+              draggable={true}
+              onClick={() => handleSelect(rect.id)}
+              onDragMove={(e) => handleDragMove(e, rect.id, "rectangle")}
+            />
+          ))}
+          {circles.map((circle) => (
+            <Circle
+              key={circle.id}
+              x={circle.x}
+              y={circle.y}
+              radius={circle.radius}
+              fill={circle.fill} // use chosen color
+              stroke="black"
+              draggable={true}
+              onClick={() => handleSelect(circle.id)}
+              onDragMove={(e) => handleDragMove(e, circle.id, "circle")}
+            />
+          ))}
+          {texts.map((text) => (
+            <Text
+              key={text.id}
+              x={text.x}
+              y={text.y}
+              text={text.text}
+              fontSize={20}
+              fill="black"
+              draggable={true}
+              onClick={() => handleSelect(text.id)}
+              onDragMove={(e) => handleDragMove(e, text.id, "text")}
+            />
+          ))}
+          {newRect && (
+            <Rect 
+              x={newRect.x} 
+              y={newRect.y} 
+              width={newRect.width} 
+              height={newRect.height} 
+              fill="rgba(0, 0, 255, 0.3)" 
+            />
+          )}
+          {newCircle && (
+            <Circle 
+              x={newCircle.x} 
+              y={newCircle.y} 
+              radius={newCircle.radius} 
+              fill="rgba(0, 0, 255, 0.3)" 
+            />
+          )}
           {selectionRect && (
             <Rect
               x={selectionRect.x}
@@ -307,11 +281,25 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
           }}
           value={editingText.value}
           onChange={(e) => setEditingText({ ...editingText, value: e.target.value })}
-          onBlur={handleTextBlur}
+          onBlur={() => {
+            if (editingText.value.trim()) {
+              setTexts([
+                ...texts,
+                { id: texts.length + 1, x: editingText.x, y: editingText.y, text: editingText.value },
+              ]);
+            }
+            setEditingText(null);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              handleTextBlur();
+              if (editingText.value.trim()) {
+                setTexts([
+                  ...texts,
+                  { id: texts.length + 1, x: editingText.x, y: editingText.y, text: editingText.value },
+                ]);
+              }
+              setEditingText(null);
             } else if (e.key === "Escape") {
               setEditingText(null);
             }
