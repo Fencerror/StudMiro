@@ -1,8 +1,8 @@
-import { Stage, Layer, Rect, Circle, Text } from "react-konva";
+import { Stage, Layer, Rect, Circle, Text, Arrow } from "react-konva";
 import { useState, useRef, SetStateAction, useEffect } from "react";
 
 interface BoardCanvasProps {
-  selectedTool: "select" | "rectangle" | "circle" | "text";
+  selectedTool: "select" | "rectangle" | "circle" | "text" | "arrow";
   selectedColor: string; // new prop for shape color
 }
 
@@ -16,10 +16,25 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
   const [newCircle, setNewCircle] = useState<{ x: number; y: number; radius: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [editingText, setEditingText] = useState<{ x: number; y: number; value: string } | null>(null);
+  const [arrows, setArrows] = useState<{ id: number; points: number[]; stroke: string }[]>([]);
+  const [newArrow, setNewArrow] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const stageRef = useRef<any>(null);
 
   // Начинаем рисование или выделение
   const handleMouseDown = () => {
+    if (selectedTool === "arrow") {
+      const stage = stageRef.current;
+      const pos = stage.getPointerPosition();
+      if (!newArrow) {
+        // первый клик – сохраняем стартовые координаты
+        setNewArrow({ startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y });
+      } else {
+        // второй клик – завершаем стрелку, делаем её чёрной
+        setArrows([...arrows, { id: arrows.length + 1, points: [newArrow.startX, newArrow.startY, pos.x, pos.y], stroke: "black" }]);
+        setNewArrow(null);
+      }
+      return;
+    }
     if (drawing) return;
     setDrawing(true);
 
@@ -32,15 +47,19 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
       setNewCircle({ x: pos.x, y: pos.y, radius: 0 });
     } else if (selectedTool === "select") {
       setSelectionRect({ x: pos.x, y: pos.y, width: 0, height: 0 });
+    } else if (selectedTool === "text") {
+      setEditingText({ x: pos.x, y: pos.y, value: "" });
     }
   };
 
   // Изменяем размер фигуры или рамки выделения
   const handleMouseMove = () => {
-    if (!drawing) return;
-
     const stage = stageRef.current;
     const pos = stage.getPointerPosition();
+    if (selectedTool === "arrow" && newArrow) {
+      setNewArrow({ ...newArrow, endX: pos.x, endY: pos.y });
+    }
+    if (!drawing) return;
 
     if (selectedTool === "rectangle" && newRect) {
       setNewRect({
@@ -68,6 +87,7 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
 
   // Завершаем рисование или выделение
   const handleMouseUp = () => {
+    if (selectedTool === "arrow") return;
     if (!drawing) return;
     setDrawing(false);
 
@@ -236,6 +256,9 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
               onDragMove={(e) => handleDragMove(e, text.id, "text")}
             />
           ))}
+          {arrows.map((arrow) => (
+            <Arrow key={arrow.id} points={arrow.points} stroke={arrow.stroke} pointerWidth={10} pointerLength={15} />
+          ))}
           {newRect && (
             <Rect 
               x={newRect.x} 
@@ -261,6 +284,9 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
               height={selectionRect.height}
               fill="rgba(0, 0, 255, 0.3)"
             />
+          )}
+          {newArrow && (
+            <Arrow points={[newArrow.startX, newArrow.startY, newArrow.endX, newArrow.endY]} stroke={selectedColor} pointerWidth={10} pointerLength={15} dash={[4, 4]} />
           )}
         </Layer>
       </Stage>

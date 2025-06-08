@@ -1,7 +1,7 @@
 import { useState } from "react";
 import styled from "styled-components";
 
-type Tool = "select" | "rectangle" | "circle" | "text";
+type Tool = "select" | "rectangle" | "circle" | "text" | "arrow";
 
 interface ToolbarProps {
   onSelectTool: (tool: Tool) => void;
@@ -35,6 +35,11 @@ export default function Toolbar({ onSelectTool, onSelectColor }: ToolbarProps) {
             <ToolbarItem>
               <ToolbarButton onClick={() => onSelectTool("select")}>
                 🔲
+              </ToolbarButton>
+            </ToolbarItem>
+            <ToolbarItem>
+              <ToolbarButton onClick={() => onSelectTool("arrow")}>
+                ➤
               </ToolbarButton>
             </ToolbarItem>
           </>
