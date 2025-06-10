@@ -25,6 +25,7 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
     if (selectedTool === "arrow") {
       const stage = stageRef.current;
       const pos = stage.getPointerPosition();
+
       if (!newArrow) {
         // первый клик – сохраняем стартовые координаты
         setNewArrow({ startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y });
@@ -35,6 +36,7 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
       }
       return;
     }
+    
     if (drawing) return;
     setDrawing(true);
 
@@ -68,7 +70,9 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
         width: pos.x - newRect.x,
         height: pos.y - newRect.y,
       });
-    } else if (selectedTool === "circle" && newCircle) {
+    } 
+    
+    else if (selectedTool === "circle" && newCircle) {
       const radius = Math.sqrt(Math.pow(pos.x - newCircle.x, 2) + Math.pow(pos.y - newCircle.y, 2));
       setNewCircle({
         x: newCircle.x,
@@ -94,7 +98,9 @@ export default function BoardCanvas({ selectedTool, selectedColor }: BoardCanvas
     if (selectedTool === "rectangle" && newRect) {
       setRectangles([...rectangles, { id: rectangles.length + 1, fill: selectedColor, ...newRect }]);
       setNewRect(null);
-    } else if (selectedTool === "circle" && newCircle) {
+    } 
+    
+    else if (selectedTool === "circle" && newCircle) {
       setCircles([...circles, { id: circles.length + 1, fill: selectedColor, ...newCircle }]);
       setNewCircle(null);
     } else if (selectedTool === "select" && selectionRect) {
